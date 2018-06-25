@@ -1,4 +1,4 @@
-package android.heller.photo.photomap.Activities;
+package android.heller.photo.photomap.activities;
 
 import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.models.LocationModel;

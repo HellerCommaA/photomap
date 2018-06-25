@@ -1,17 +1,28 @@
 package android.heller.photo.photomap.models;
 
+import android.content.Context;
+import android.heller.photo.photomap.activities.PhotoMap;
+import android.location.Location;
+import android.util.Log;
+
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
 public class LocationModel {
 
+    private final String TAG = LocationModel.class.getSimpleName();
+
     private static LocationModel mInstance = null;
     private Map<LatLng, Marker> mMap = new HashMap<>();
+    private Context mContext;
 
-    private LocationModel() {}
+    private LocationModel() {
+    }
 
     public static LocationModel getInstance() {
         if (mInstance == null) {
@@ -33,16 +44,13 @@ public class LocationModel {
         return xMarker;
     }
 
+    // called before activity destroyed
+    public void save() {
 
+    }
 
+    // load from DB
+    public void load(GoogleMap xMap) {
 
-
-
-
-
-
-
-
-
-
+    }
 }

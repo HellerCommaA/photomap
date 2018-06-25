@@ -26,14 +26,14 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
-        <activity android:name=".Activities.PhotoMap">
+        <activity android:name=".activities.PhotoMap">
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
 
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
         </activity>
-        <activity android:name=".Activities.MarkerClickActivity" />
+        <activity android:name=".activities.MarkerClickActivity" />
     </application>
 
 </manifest>
