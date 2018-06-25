@@ -4,12 +4,12 @@ import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
-@Entity
-public class LocationData {
+@Entity()
+public class PhotoLocation {
     @PrimaryKey
     @NonNull
     public String id;
     public String name;
-    public Long lat;
-    public Long lon;
+    public double lat;
+    public double lon;
 }

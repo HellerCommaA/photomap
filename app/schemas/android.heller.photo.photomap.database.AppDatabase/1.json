@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "db4c85b890979df56e817518deac8def",
+    "identityHash": "8da57370b5d386aaca55948cecd2d252",
     "entities": [
       {
-        "tableName": "LocationData",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT, `lat` INTEGER, `lon` INTEGER, PRIMARY KEY(`id`))",
+        "tableName": "PhotoLocation",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT, `lat` REAL NOT NULL, `lon` REAL NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -23,14 +23,14 @@
           {
             "fieldPath": "lat",
             "columnName": "lat",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "REAL",
+            "notNull": true
           },
           {
             "fieldPath": "lon",
             "columnName": "lon",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "REAL",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -45,7 +45,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"db4c85b890979df56e817518deac8def\")"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"8da57370b5d386aaca55948cecd2d252\")"
     ]
   }
 }

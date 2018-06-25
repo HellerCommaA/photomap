@@ -1,7 +1,7 @@
 package android.heller.photo.photomap.database.utils;
 
 import android.heller.photo.photomap.database.AppDatabase;
-import android.heller.photo.photomap.database.LocationData;
+import android.heller.photo.photomap.database.PhotoLocation;
 import android.support.annotation.NonNull;
 
 public class DatabaseInit {
@@ -12,11 +12,11 @@ public class DatabaseInit {
     }
 
     private static void addLocation(final AppDatabase xDb, String xId, long xLat, long xLon, String xName) {
-        LocationData data = new LocationData();
+        PhotoLocation data = new PhotoLocation();
         data.id = xId;
         data.lat = xLat;
         data.lon = xLon;
         data.name = xName;
-        xDb.locationDatabase().insertLocation(data);
+        xDb.locationModel().insertLocation(data);
     }
 }

@@ -6,9 +6,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.database.AppDatabase;
-import android.heller.photo.photomap.database.LocationData;
+import android.heller.photo.photomap.database.PhotoLocation;
 import android.heller.photo.photomap.database.utils.DatabaseInit;
-import android.heller.photo.photomap.models.LocationModel;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -38,6 +37,7 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
     private AppDatabase mDb;
 
     public static final String LAT_EXTRA = "android.heller.photo.LAT_EXTRA";
+    private List<PhotoLocation> mLocationList;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -52,12 +52,9 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         }
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         mDb = AppDatabase.getInMemoryDb(getApplicationContext());
-        populateDatabase();
+//        populateDatabase();
         mapFrag.getMapAsync(this);
-        List<LocationData> t = mDb.locationDatabase().loadAllLocations();
-        for(LocationData d : t) {
-            Log.d(TAG, "onCreate: locationData " + d.lat + " " + d.lon + " " + d.name + " " + d.id);
-        }
+        mLocationList = mDb.locationModel().loadAllLocations();
     }
 
     private void populateDatabase() {
@@ -67,7 +64,15 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
     @Override
     public void onMapReady(GoogleMap xMap) {
         mMap = xMap;
-        LocationModel.getInstance().load(mMap);
+        Log.d(TAG, "onMapReady: aeh");
+        if (mLocationList != null && mLocationList.size() > 0) {
+            for(PhotoLocation data : mLocationList) {
+                Log.d(TAG, String.format("aeh: got data %f %f %s", data.lat, data.lon, data.name));
+                mMap.addMarker(new MarkerOptions().position(new LatLng(data.lat, data.lon)).title(data.name));
+            }
+        } else {
+            Log.d(TAG, "onMapReady: aeh locationData == null | 0");
+        }
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
@@ -82,7 +87,12 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
             @Override
             public void onMapClick(LatLng latLng) {
                 Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
-                LocationModel.getInstance().addLocation(marker.getPosition(), marker);
+                PhotoLocation tLocation = new PhotoLocation();
+                tLocation.name = "Test Name";
+                tLocation.id = marker.getId();
+                tLocation.lat = marker.getPosition().latitude;
+                tLocation.lon = marker.getPosition().longitude;
+                mDb.locationModel().insertLocation(tLocation);
             }
         });
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -99,26 +109,17 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
 
     @Override
     public void onMyLocationClick(@NonNull Location xLocation) {
-        Log.d(TAG, "onMyLocationClick: ");
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(xLocation.getLatitude(), xLocation.getLongitude()), ZOOM_LEVEL));
     }
 
     @Override
-    public void onLowMemory() {
-        super.onLowMemory();
-        LocationModel.getInstance().save();
-    }
-
-    @Override
     protected void onDestroy() {
-        LocationModel.getInstance().save();
         AppDatabase.destroy();
         super.onDestroy();
     }
 
     @Override
     public boolean onMyLocationButtonClick() {
-        Log.d(TAG, "onMyLocationButtonClick: ");
         return false;
     }
 }
