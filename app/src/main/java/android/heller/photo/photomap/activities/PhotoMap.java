@@ -8,6 +8,7 @@ import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.database.AppDatabase;
 import android.heller.photo.photomap.database.PhotoLocation;
 import android.heller.photo.photomap.database.utils.DatabaseInit;
+import android.heller.photo.photomap.models.LocationModel;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -27,6 +28,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.List;
+import java.util.UUID;
 
 public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private final String TAG = PhotoMap.class.getSimpleName();
@@ -34,9 +36,10 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
     boolean mPermissionsGranted = false;
     LocationManager lm;
     final int ZOOM_LEVEL = 15;
-    private AppDatabase mDb;
+    private LocationModel mLocationModel;
 
-    public static final String LAT_EXTRA = "android.heller.photo.LAT_EXTRA";
+    public static final String MARKER_EXTRA = "android.heller.photo.MARKER_EXTRA";
+
     private List<PhotoLocation> mLocationList;
 
     @Override
@@ -51,10 +54,11 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 255);
         }
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        mDb = AppDatabase.getInMemoryDb(getApplicationContext());
-//        populateDatabase();
         mapFrag.getMapAsync(this);
+        LocationModel.setContext(getApplicationContext());
+        
         mLocationList = mDb.locationModel().loadAllLocations();
+
     }
 
     private void populateDatabase() {
@@ -64,10 +68,11 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
     @Override
     public void onMapReady(GoogleMap xMap) {
         mMap = xMap;
+        mLocationModel = LocationModel.getInstance();
+
         Log.d(TAG, "onMapReady: aeh");
         if (mLocationList != null && mLocationList.size() > 0) {
             for(PhotoLocation data : mLocationList) {
-                Log.d(TAG, String.format("aeh: got data %f %f %s", data.lat, data.lon, data.name));
                 mMap.addMarker(new MarkerOptions().position(new LatLng(data.lat, data.lon)).title(data.name));
             }
         } else {
@@ -76,9 +81,9 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
-                Log.d(TAG, "onMarkerClick: marker.name: " + marker.getId());
                 Intent i = new Intent(PhotoMap.this, MarkerClickActivity.class);
-                i.putExtra(LAT_EXTRA, marker.getPosition());
+                Log.d(TAG, "onMarkerClick: AEH marker.lat " + marker.getPosition().latitude);
+                i.putExtra(MARKER_EXTRA, mLocationModel.getUuidForMarker(marker).toString());
                 PhotoMap.this.startActivity(i);
                 return true;
             }
@@ -87,9 +92,10 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
             @Override
             public void onMapClick(LatLng latLng) {
                 Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
+                mLocationModel.addMarker(marker);
                 PhotoLocation tLocation = new PhotoLocation();
+                tLocation.id = mLocationModel.getUuidForMarker(marker).toString();
                 tLocation.name = "Test Name";
-                tLocation.id = marker.getId();
                 tLocation.lat = marker.getPosition().latitude;
                 tLocation.lon = marker.getPosition().longitude;
                 mDb.locationModel().insertLocation(tLocation);

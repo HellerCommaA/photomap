@@ -11,7 +11,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract LocationDao locationModel();
 
-    public static AppDatabase getInMemoryDb(Context xContext) {
+    public static AppDatabase getDatabase(Context xContext) {
         if (mInstance == null) {
             mInstance = Room.databaseBuilder(xContext.getApplicationContext(), AppDatabase.class, "heller.photo")
                     .allowMainThreadQueries()
