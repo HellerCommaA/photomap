@@ -27,6 +27,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.List;
+import java.util.UUID;
 
 public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private final String TAG = PhotoMap.class.getSimpleName();
@@ -54,12 +55,13 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         mapFrag.getMapAsync(this);
         LocationModel.setContext(getApplicationContext());
         mLocationModel = LocationModel.getInstance();
-        mLocationList = mLocationModel.loadSavedLocations();
     }
 
     @Override
     public void onMapReady(GoogleMap xMap) {
         mMap = xMap;
+        mLocationList = mLocationModel.loadSavedLocations(mMap);
+
         mLocationModel = LocationModel.getInstance();
 
         if (mLocationList != null && mLocationList.size() > 0) {
@@ -77,7 +79,12 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
             public boolean onMarkerClick(Marker marker) {
                 Intent i = new Intent(PhotoMap.this, MarkerClickActivity.class);
                 Log.d(TAG, "onMarkerClick: AEH marker.lat " + marker.getPosition().latitude);
-                i.putExtra(MARKER_EXTRA, mLocationModel.getUuidForMarker(marker).toString());
+                UUID uuid = mLocationModel.getUuidForMarker(marker);
+                if (uuid != null) {
+                    i.putExtra(MARKER_EXTRA, mLocationModel.getUuidForMarker(marker).toString());
+                } else {
+                    Log.d(TAG, "onMarkerClick: AEH: found NULL uuid in LocationModel");
+                }
                 PhotoMap.this.startActivity(i);
                 return true;
             }

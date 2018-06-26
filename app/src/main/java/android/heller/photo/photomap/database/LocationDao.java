@@ -19,4 +19,7 @@ public interface LocationDao {
 
     @Query("DELETE from PhotoLocation where PhotoLocation.id = :xId")
     void delete(String xId);
+
+    @Query("SELECT * from PhotoLocation WHERE id = :xId")
+    PhotoLocation getLocation(String xId);
 }

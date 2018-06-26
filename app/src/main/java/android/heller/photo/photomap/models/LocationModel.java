@@ -4,7 +4,10 @@ import android.content.Context;
 import android.heller.photo.photomap.database.AppDatabase;
 import android.heller.photo.photomap.database.PhotoLocation;
 
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,10 +16,12 @@ import java.util.UUID;
 
 public class LocationModel {
     private static LocationModel mInstance;
-    private Map<UUID, Marker> mMarkers;
+//    private Map<UUID, Marker> mMarkers;
     private final String TAG = LocationModel.class.getSimpleName();
     private AppDatabase mDb;
     private Context mContext;
+    private GoogleMap mMap;
+
     public static LocationModel getInstance() {
         if (mInstance == null) {
             mInstance = new LocationModel();
@@ -30,16 +35,17 @@ public class LocationModel {
     }
 
     private LocationModel() {
-        mMarkers = new HashMap<>();
+//        mMarkers = new HashMap<>();
     }
 
     public Marker addMarker(final UUID xUuid, final Marker xMarker) {
-        mMarkers.put(xUuid, xMarker);
+//        mMarkers.put(xUuid, xMarker);
         PhotoLocation loc = new PhotoLocation();
         loc.id = xUuid.toString();
         loc.lat = xMarker.getPosition().latitude;
         loc.lon = xMarker.getPosition().longitude;
         loc.name = xMarker.getTitle();
+        mDb.locationModel().insertLocation(loc);
         return xMarker;
     }
 
@@ -47,8 +53,12 @@ public class LocationModel {
         return addMarker(UUID.randomUUID(), xMarker);
     }
 
-    public Marker getMarker(UUID xUuid) {
-        return mMarkers.get(xUuid);
+    public MarkerOptions getMarker(UUID xUuid) {
+        PhotoLocation loc = mDb.locationModel().getLocation(xUuid.toString());
+        MarkerOptions opt = new MarkerOptions();
+        opt.position(new LatLng(loc.lat, loc.lon));
+        opt.title(loc.name);
+        return opt;
     }
     public Marker getMarker(String xUuid) {
         return mMarkers.get(UUID.fromString(xUuid));
@@ -85,7 +95,15 @@ public class LocationModel {
     }
 
     // load saved locations from memory
-    public List<PhotoLocation> loadSavedLocations() {
-        return mDb.locationModel().loadAllLocations();
+    public List<PhotoLocation> loadSavedLocations(GoogleMap xMap) {
+        mMap = xMap;
+        List<PhotoLocation> list = mDb.locationModel().loadAllLocations();
+        for(PhotoLocation each : list) {
+            MarkerOptions m = new MarkerOptions();
+            m.position(new LatLng(each.lat, each.lon));
+            m.title(each.name);
+            mMarkers.put(UUID.fromString(each.id), xMap.addMarker(m));
+        }
+        return list;
     }
 }
