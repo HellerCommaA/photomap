@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.database.AppDatabase;
 import android.heller.photo.photomap.database.PhotoLocation;
-import android.heller.photo.photomap.database.utils.DatabaseInit;
 import android.heller.photo.photomap.models.LocationModel;
 import android.location.Location;
 import android.location.LocationManager;
@@ -28,7 +27,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.List;
-import java.util.UUID;
 
 public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private final String TAG = PhotoMap.class.getSimpleName();
@@ -37,10 +35,9 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
     LocationManager lm;
     final int ZOOM_LEVEL = 15;
     private LocationModel mLocationModel;
+    private List<PhotoLocation> mLocationList;
 
     public static final String MARKER_EXTRA = "android.heller.photo.MARKER_EXTRA";
-
-    private List<PhotoLocation> mLocationList;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,13 +53,8 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         mapFrag.getMapAsync(this);
         LocationModel.setContext(getApplicationContext());
-        
-        mLocationList = mDb.locationModel().loadAllLocations();
-
-    }
-
-    private void populateDatabase() {
-        DatabaseInit.populateSync(mDb);
+        mLocationModel = LocationModel.getInstance();
+        mLocationList = mLocationModel.loadSavedLocations();
     }
 
     @Override
@@ -70,10 +62,12 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         mMap = xMap;
         mLocationModel = LocationModel.getInstance();
 
-        Log.d(TAG, "onMapReady: aeh");
         if (mLocationList != null && mLocationList.size() > 0) {
             for(PhotoLocation data : mLocationList) {
-                mMap.addMarker(new MarkerOptions().position(new LatLng(data.lat, data.lon)).title(data.name));
+                MarkerOptions opt = new MarkerOptions();
+                opt.position(new LatLng(data.lat, data.lon));
+                opt.title(data.name);
+                mMap.addMarker(opt);
             }
         } else {
             Log.d(TAG, "onMapReady: aeh locationData == null | 0");
@@ -93,12 +87,6 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
             public void onMapClick(LatLng latLng) {
                 Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
                 mLocationModel.addMarker(marker);
-                PhotoLocation tLocation = new PhotoLocation();
-                tLocation.id = mLocationModel.getUuidForMarker(marker).toString();
-                tLocation.name = "Test Name";
-                tLocation.lat = marker.getPosition().latitude;
-                tLocation.lon = marker.getPosition().longitude;
-                mDb.locationModel().insertLocation(tLocation);
             }
         });
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
