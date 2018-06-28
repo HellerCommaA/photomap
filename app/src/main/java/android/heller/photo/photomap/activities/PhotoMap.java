@@ -1,9 +1,9 @@
 package android.heller.photo.photomap.activities;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.database.AppDatabase;
 import android.heller.photo.photomap.database.PhotoLocation;
@@ -26,18 +26,24 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
-public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
+public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
+        GoogleMap.OnMyLocationButtonClickListener,
+        GoogleMap.OnMyLocationClickListener,
+        GoogleMap.OnMarkerClickListener,
+        ActivityCompat.OnRequestPermissionsResultCallback, GoogleMap.OnMapClickListener {
     private final String TAG = PhotoMap.class.getSimpleName();
-    private GoogleMap mMap;
+    public static GoogleMap mMap;
     boolean mPermissionsGranted = false;
     LocationManager lm;
     final int ZOOM_LEVEL = 15;
     private LocationModel mLocationModel;
-    private List<PhotoLocation> mLocationList;
-
+    List<Marker> mMarkers;
     public static final String MARKER_EXTRA = "android.heller.photo.MARKER_EXTRA";
 
     @Override
@@ -45,7 +51,7 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         SupportMapFragment mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PERMISSION_GRANTED) {
             mPermissionsGranted = true;
         } else {
             mPermissionsGranted = false;
@@ -55,57 +61,86 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
         mapFrag.getMapAsync(this);
         LocationModel.setContext(getApplicationContext());
         mLocationModel = LocationModel.getInstance();
+        mMarkers = new LinkedList<>();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.d(TAG, "onActivityResult: GOT ACTIVITY RESULT");
+        if (requestCode == 1) {
+            // this is from my activity
+            if (data == null) return; // poped off stack, not deleted
+            Boolean shouldDelete = data.getBooleanExtra(MarkerClickActivity.DELETE_RESULT, false);
+            String uuid = data.getStringExtra(MarkerClickActivity.UUID_RESULT);
+
+            Log.d(TAG, "onActivityResult: SHOULD DELETE " + shouldDelete + " UUID " + uuid);
+            if (!shouldDelete) return;
+            for(Marker m : mMarkers) {
+                if (((String) m.getTag()).equals(uuid)) {
+                    Log.d(TAG, "onActivityResult: removing found marker");
+                    m.setVisible(false);
+                    m.remove();
+                    
+                    return;
+                }
+            }
+            Log.d(TAG, "onActivityResult: NO MARKERS FOUND TO REMOVE");
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        for(int i = 0; i < permissions.length; i++) {
+            if (permissions[i].equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                if(grantResults[i] == PERMISSION_GRANTED) {
+                    postPermissions(true);
+                    return;
+                }
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void postPermissions(boolean xPermissions) {
+        mMap.setMyLocationEnabled(xPermissions);
+        mMap.setOnMyLocationButtonClickListener(this);
+        mMap.setOnMyLocationClickListener(this);
+        Location l = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(l.getLatitude(), l.getLongitude()), ZOOM_LEVEL));
     }
 
     @Override
     public void onMapReady(GoogleMap xMap) {
         mMap = xMap;
-        mLocationList = mLocationModel.loadSavedLocations(mMap);
+        List<PhotoLocation> locationList = mLocationModel.loadSavedLocations(mMap);
 
         mLocationModel = LocationModel.getInstance();
 
-        if (mLocationList != null && mLocationList.size() > 0) {
-            for(PhotoLocation data : mLocationList) {
+        if (locationList != null && locationList.size() > 0) {
+            for(PhotoLocation data : locationList) {
                 MarkerOptions opt = new MarkerOptions();
                 opt.position(new LatLng(data.lat, data.lon));
                 opt.title(data.name);
-                mMap.addMarker(opt);
+                Marker m = mMap.addMarker(opt);
+                Log.d(TAG, "onMapReady: adding id to map " + data.id);
+                m.setTag(data.id);
+                mMarkers.add(m);
             }
         } else {
             Log.d(TAG, "onMapReady: aeh locationData == null | 0");
         }
-        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-            @Override
-            public boolean onMarkerClick(Marker marker) {
-                Intent i = new Intent(PhotoMap.this, MarkerClickActivity.class);
-                Log.d(TAG, "onMarkerClick: AEH marker.lat " + marker.getPosition().latitude);
-                UUID uuid = mLocationModel.getUuidForMarker(marker);
-                if (uuid != null) {
-                    i.putExtra(MARKER_EXTRA, mLocationModel.getUuidForMarker(marker).toString());
-                } else {
-                    Log.d(TAG, "onMarkerClick: AEH: found NULL uuid in LocationModel");
-                }
-                PhotoMap.this.startActivity(i);
-                return true;
-            }
-        });
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng latLng) {
-                Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
-                mLocationModel.addMarker(marker);
-            }
-        });
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        mMap.setOnMarkerClickListener(this);
+        mMap.setOnMapClickListener(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PERMISSION_GRANTED) {
             // TODO: override onPermissionsGranted thing
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 255);
-            return;
+        } else {
+            postPermissions(mPermissionsGranted);
         }
-        mMap.setMyLocationEnabled(mPermissionsGranted);
-        mMap.setOnMyLocationButtonClickListener(this);
-        mMap.setOnMyLocationClickListener(this);
-        Location l = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(l.getLatitude(), l.getLongitude()), ZOOM_LEVEL));
     }
 
     @Override
@@ -122,5 +157,22 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback, Go
     @Override
     public boolean onMyLocationButtonClick() {
         return false;
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        Intent i = new Intent(PhotoMap.this, MarkerClickActivity.class);
+        Log.d(TAG, "onMarkerClick: marker.getTag() == " + marker.getTag());
+        i.putExtra(MARKER_EXTRA, (String) marker.getTag());
+        PhotoMap.this.startActivityForResult(i, 1);
+        return false;
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {
+        Marker marker = mMap.addMarker(new MarkerOptions().position(latLng));
+        marker.setTag(UUID.randomUUID().toString());
+        mLocationModel.addMarker(marker);
+        mMarkers.add(marker);
     }
 }

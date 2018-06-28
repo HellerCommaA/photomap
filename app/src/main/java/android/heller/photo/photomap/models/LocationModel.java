@@ -3,24 +3,24 @@ package android.heller.photo.photomap.models;
 import android.content.Context;
 import android.heller.photo.photomap.database.AppDatabase;
 import android.heller.photo.photomap.database.PhotoLocation;
+import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class LocationModel {
     private static LocationModel mInstance;
-//    private Map<UUID, Marker> mMarkers;
+    private List<Marker> mMarkers;
     private final String TAG = LocationModel.class.getSimpleName();
     private AppDatabase mDb;
     private Context mContext;
-    private GoogleMap mMap;
 
     public static LocationModel getInstance() {
         if (mInstance == null) {
@@ -35,13 +35,13 @@ public class LocationModel {
     }
 
     private LocationModel() {
-//        mMarkers = new HashMap<>();
+        mMarkers = new LinkedList<>();
     }
 
-    public Marker addMarker(final UUID xUuid, final Marker xMarker) {
-//        mMarkers.put(xUuid, xMarker);
+    private Marker addCompletedMarker(final Marker xMarker) {
+        mMarkers.add(xMarker);
         PhotoLocation loc = new PhotoLocation();
-        loc.id = xUuid.toString();
+        loc.id = (String) Objects.requireNonNull(xMarker.getTag().toString());
         loc.lat = xMarker.getPosition().latitude;
         loc.lon = xMarker.getPosition().longitude;
         loc.name = xMarker.getTitle();
@@ -50,59 +50,46 @@ public class LocationModel {
     }
 
     public Marker addMarker(final Marker xMarker) {
-        return addMarker(UUID.randomUUID(), xMarker);
+        if (xMarker.getTag() != null) {
+            return addCompletedMarker(xMarker);
+        } else {
+            UUID uuid = UUID.randomUUID();
+            xMarker.setTag(uuid.toString());
+            return addMarker(xMarker);
+        }
     }
 
-    public MarkerOptions getMarker(UUID xUuid) {
-        PhotoLocation loc = mDb.locationModel().getLocation(xUuid.toString());
-        MarkerOptions opt = new MarkerOptions();
-        opt.position(new LatLng(loc.lat, loc.lon));
-        opt.title(loc.name);
-        return opt;
-    }
     public Marker getMarker(String xUuid) {
-        return mMarkers.get(UUID.fromString(xUuid));
-    }
-
-    public void removeMarkerFromList(final Marker xMarker) {
-        if (xMarker == null) return;
-        mDb.locationModel().delete(xMarker.getId());
-        if (mMarkers.containsValue(xMarker)) {
-            for(UUID k : mMarkers.keySet()) {
-                if (mMarkers.get(k).equals(xMarker)) {
-                    mMarkers.remove(k);
-                    return;
+        for(Marker m : mMarkers) {
+            if (m.getTag() != null) {
+                if (m.getTag().toString().equals(xUuid)) {
+                    return m;
                 }
             }
         }
-    }
-
-    public UUID getUuidForMarker(final Marker xMarker) {
-        UUID uuid = null;
-        for(UUID k : mMarkers.keySet()) {
-            if (mMarkers.get(k).equals(xMarker)) {
-                uuid = k;
-                break;
-            }
-        }
-        // TODO check that the value returned from the database and the value found in mMap are equal
-        return uuid;
+        return null;
     }
 
     public void removeMarkerFromMap(Marker xMarker) {
+        String uuid = (String) xMarker.getTag();
+        mDb.locationModel().delete(uuid);
+        mMarkers.remove(xMarker);
+        xMarker.setVisible(false);
         xMarker.remove();
-        mDb.locationModel().delete(xMarker.getId());
+
+        
     }
 
     // load saved locations from memory
     public List<PhotoLocation> loadSavedLocations(GoogleMap xMap) {
-        mMap = xMap;
         List<PhotoLocation> list = mDb.locationModel().loadAllLocations();
         for(PhotoLocation each : list) {
             MarkerOptions m = new MarkerOptions();
             m.position(new LatLng(each.lat, each.lon));
             m.title(each.name);
-            mMarkers.put(UUID.fromString(each.id), xMap.addMarker(m));
+            Marker marker = xMap.addMarker(m);
+            marker.setTag(each.id);
+            mMarkers.add(marker);
         }
         return list;
     }
