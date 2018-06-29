@@ -38,7 +38,7 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
         GoogleMap.OnMarkerClickListener,
         ActivityCompat.OnRequestPermissionsResultCallback, GoogleMap.OnMapClickListener {
     private final String TAG = PhotoMap.class.getSimpleName();
-    public static GoogleMap mMap;
+    private GoogleMap mMap;
     boolean mPermissionsGranted = false;
     LocationManager lm;
     final int ZOOM_LEVEL = 15;
@@ -74,6 +74,8 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
         }
     }
 
+    // call onResume and onMapReady
+    // to load things from database -> map
     void loadPoints(){
         if (mLocationModel == null) {
             mLocationModel = LocationModel.getInstance();
@@ -129,7 +131,6 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
         mMap.setOnMarkerClickListener(this);
         mMap.setOnMapClickListener(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PERMISSION_GRANTED) {
-            // TODO: override onPermissionsGranted thing
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 255);
         } else {
             postPermissions(mPermissionsGranted);
