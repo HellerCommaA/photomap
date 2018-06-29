@@ -1,7 +1,5 @@
 package android.heller.photo.photomap.activities;
 
-import android.app.Activity;
-import android.content.Intent;
 import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.models.LocationModel;
 import android.os.Bundle;
@@ -48,10 +46,6 @@ public class MarkerClickActivity extends AppCompatActivity {
                 if (mMarker != null) {
                     LocationModel model = LocationModel.getInstance();
                     model.removeMarkerFromMap(mMarker);
-                    Intent returnIntent = new Intent();
-                    returnIntent.putExtra(DELETE_RESULT, true);
-                    returnIntent.putExtra(UUID_RESULT, (String) mMarker.getTag());
-                    setResult(Activity.RESULT_OK,returnIntent);
                     finish();
                 } else {
                     Log.d(TAG, "onClick: ClickActivity mMarker == NULL");

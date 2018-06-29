@@ -65,29 +65,38 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.d(TAG, "onActivityResult: GOT ACTIVITY RESULT");
-        if (requestCode == 1) {
-            // this is from my activity
-            if (data == null) return; // poped off stack, not deleted
-            Boolean shouldDelete = data.getBooleanExtra(MarkerClickActivity.DELETE_RESULT, false);
-            String uuid = data.getStringExtra(MarkerClickActivity.UUID_RESULT);
-
-            Log.d(TAG, "onActivityResult: SHOULD DELETE " + shouldDelete + " UUID " + uuid);
-            if (!shouldDelete) return;
-            for(Marker m : mMarkers) {
-                if (((String) m.getTag()).equals(uuid)) {
-                    Log.d(TAG, "onActivityResult: removing found marker");
-                    m.setVisible(false);
-                    m.remove();
-                    
-                    return;
-                }
-            }
-            Log.d(TAG, "onActivityResult: NO MARKERS FOUND TO REMOVE");
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume: AEH ON RESUME");
+        if (mMap != null) {
+            mMap.clear();
+            loadPoints();
         }
     }
+
+    void loadPoints(){
+        if (mLocationModel == null) {
+            mLocationModel = LocationModel.getInstance();
+        }
+        List<PhotoLocation> locationList = mLocationModel.loadSavedLocations(mMap);
+
+        mLocationModel = LocationModel.getInstance();
+
+        if (locationList != null && locationList.size() > 0) {
+            for(PhotoLocation data : locationList) {
+                MarkerOptions opt = new MarkerOptions();
+                opt.position(new LatLng(data.lat, data.lon));
+                opt.title(data.name);
+                Marker m = mMap.addMarker(opt);
+                Log.d(TAG, "onMapReady: adding id to map " + data.id);
+                m.setTag(data.id);
+                mMarkers.add(m);
+            }
+        } else {
+            Log.d(TAG, "onMapReady: aeh locationData == null | 0");
+        }
+    }
+
 
     @SuppressLint("MissingPermission")
     @Override
@@ -116,23 +125,7 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
     @Override
     public void onMapReady(GoogleMap xMap) {
         mMap = xMap;
-        List<PhotoLocation> locationList = mLocationModel.loadSavedLocations(mMap);
-
-        mLocationModel = LocationModel.getInstance();
-
-        if (locationList != null && locationList.size() > 0) {
-            for(PhotoLocation data : locationList) {
-                MarkerOptions opt = new MarkerOptions();
-                opt.position(new LatLng(data.lat, data.lon));
-                opt.title(data.name);
-                Marker m = mMap.addMarker(opt);
-                Log.d(TAG, "onMapReady: adding id to map " + data.id);
-                m.setTag(data.id);
-                mMarkers.add(m);
-            }
-        } else {
-            Log.d(TAG, "onMapReady: aeh locationData == null | 0");
-        }
+        loadPoints();
         mMap.setOnMarkerClickListener(this);
         mMap.setOnMapClickListener(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PERMISSION_GRANTED) {
@@ -164,8 +157,8 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
         Intent i = new Intent(PhotoMap.this, MarkerClickActivity.class);
         Log.d(TAG, "onMarkerClick: marker.getTag() == " + marker.getTag());
         i.putExtra(MARKER_EXTRA, (String) marker.getTag());
-        PhotoMap.this.startActivityForResult(i, 1);
-        return false;
+        PhotoMap.this.startActivity(i);
+        return true;
     }
 
     @Override
