@@ -1,4 +1,5 @@
 package android.heller.photo.photomap.database;
+
 import android.arch.persistence.room.Database;
 import android.arch.persistence.room.Room;
 import android.arch.persistence.room.RoomDatabase;

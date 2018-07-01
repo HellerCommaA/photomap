@@ -1,12 +1,10 @@
 package android.heller.photo.photomap.activities;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.heller.photo.photomap.R;
 import android.heller.photo.photomap.models.LocationModel;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -27,10 +25,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Locale;
 
-public class MarkerClickActivity extends AppCompatActivity implements View.OnClickListener, CameraKitEventListener {
+public class MarkerClickActivity extends AppCompatActivity implements CameraKitEventListener {
 
     private final String TAG = MarkerClickActivity.class.getSimpleName();
     LocationModel mModel;
@@ -65,8 +62,17 @@ public class MarkerClickActivity extends AppCompatActivity implements View.OnCli
         mLat = findViewById(R.id.lat_text);
         mUuid = (String) mMarker.getTag();
         mCamera = findViewById(R.id.camera_surface);
+        mCamera.addCameraKitListener(this);
         mTakePhotoButton = findViewById(R.id.takePhotoButton);
-        mTakePhotoButton.setOnClickListener(this);
+        mTakePhotoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mCamera != null) {
+                    Log.d(TAG, "onClick: AEH capturing image");
+                    mCamera.captureImage();
+                }
+            }
+        });
         mLong = findViewById(R.id.long_text);
         mLat.setText(String.format(Locale.US, "%f", mMarker.getPosition().latitude));
         mLong.setText(String.format(Locale.US, "%f", mMarker.getPosition().longitude));
@@ -88,14 +94,6 @@ public class MarkerClickActivity extends AppCompatActivity implements View.OnCli
     }
 
     @Override
-    public void onClick(View view) {
-        if (mCamera != null) {
-            Log.d(TAG, "onClick: AEH capturing image");
-            mCamera.captureImage();
-        }
-    }
-
-    @Override
     public void onEvent(CameraKitEvent cameraKitEvent) {
 
     }
@@ -107,27 +105,56 @@ public class MarkerClickActivity extends AppCompatActivity implements View.OnCli
 
     @Override
     public void onImage(CameraKitImage cameraKitImage) {
-        try {
-            Bitmap bitmap = cameraKitImage.getBitmap();
-            String path = Environment.getExternalStorageDirectory().toString();
-            Log.d(TAG, "onImage: AEH PATH: " + path);
-            OutputStream fOut = null;
-            Integer counter = 0;
-            File file = new File(path, mUuid + ".jpg");
-            fOut = new FileOutputStream(file);
-
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fOut); // saving the Bitmap to a file compressed as a JPEG with 85% compression rate
-            fOut.flush(); // Not really required
-            fOut.close(); // do not forget to close the stream
-
-            MediaStore.Images.Media.insertImage(getContentResolver(),file.getAbsolutePath(),file.getName(),file.getName());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        storeImage(cameraKitImage.getBitmap());
     }
 
     @Override
     public void onVideo(CameraKitVideo cameraKitVideo) {
 
+    }
+
+    /**
+     * Create a File for saving an image or video
+     */
+    private File getOutputMediaFile() {
+        // To be safe, you should check that the SDCard is mounted
+        // using Environment.getExternalStorageState() before doing this.
+        File mediaStorageDir = new File(Environment.getExternalStorageDirectory()
+                + "/Android/data/"
+                + getApplicationContext().getPackageName()
+                + "/Files");
+
+        // This location works best if you want the created images to be shared
+        // between applications and persist after your app has been uninstalled.
+
+        // Create the storage directory if it does not exist
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
+                return null;
+            }
+        }
+        // Create a media file name
+        File mediaFile;
+        String mImageName = mUuid + ".jpg";
+        mediaFile = new File(mediaStorageDir.getPath() + File.separator + mImageName);
+        return mediaFile;
+    }
+    
+    private void storeImage(Bitmap image) {
+        File pictureFile = getOutputMediaFile();
+        if (pictureFile == null) {
+            Log.d(TAG,
+                    "Error creating media file, check storage permissions: ");
+            return;
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(pictureFile);
+            image.compress(Bitmap.CompressFormat.PNG, 90, fos);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            Log.d(TAG, "File not found: " + e.getMessage());
+        } catch (IOException e) {
+            Log.d(TAG, "Error accessing file: " + e.getMessage());
+        }
     }
 }

@@ -3,7 +3,6 @@ package android.heller.photo.photomap.models;
 import android.content.Context;
 import android.heller.photo.photomap.database.AppDatabase;
 import android.heller.photo.photomap.database.PhotoLocation;
-import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
@@ -41,7 +40,7 @@ public class LocationModel {
     private Marker addCompletedMarker(final Marker xMarker) {
         mMarkers.add(xMarker);
         PhotoLocation loc = new PhotoLocation();
-        loc.id = (String) Objects.requireNonNull(xMarker.getTag().toString());
+        loc.id = Objects.requireNonNull(xMarker.getTag().toString());
         loc.lat = xMarker.getPosition().latitude;
         loc.lon = xMarker.getPosition().longitude;
         loc.name = xMarker.getTitle();
@@ -60,7 +59,7 @@ public class LocationModel {
     }
 
     public Marker getMarker(String xUuid) {
-        for(Marker m : mMarkers) {
+        for (Marker m : mMarkers) {
             if (m.getTag() != null) {
                 if (m.getTag().toString().equals(xUuid)) {
                     return m;
@@ -77,13 +76,13 @@ public class LocationModel {
         xMarker.setVisible(false);
         xMarker.remove();
 
-        
+
     }
 
     // load saved locations from memory
     public List<PhotoLocation> loadSavedLocations(GoogleMap xMap) {
         List<PhotoLocation> list = mDb.locationModel().loadAllLocations();
-        for(PhotoLocation each : list) {
+        for (PhotoLocation each : list) {
             MarkerOptions m = new MarkerOptions();
             m.position(new LatLng(each.lat, each.lon));
             m.title(each.name);

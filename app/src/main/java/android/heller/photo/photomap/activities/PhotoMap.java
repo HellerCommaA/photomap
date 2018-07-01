@@ -67,7 +67,6 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume: AEH ON RESUME");
         if (mMap != null) {
             mMap.clear();
             loadPoints();
@@ -76,16 +75,14 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
 
     // call onResume and onMapReady
     // to load things from database -> map
-    void loadPoints(){
+    void loadPoints() {
         if (mLocationModel == null) {
             mLocationModel = LocationModel.getInstance();
         }
         List<PhotoLocation> locationList = mLocationModel.loadSavedLocations(mMap);
 
-        mLocationModel = LocationModel.getInstance();
-
         if (locationList != null && locationList.size() > 0) {
-            for(PhotoLocation data : locationList) {
+            for (PhotoLocation data : locationList) {
                 MarkerOptions opt = new MarkerOptions();
                 opt.position(new LatLng(data.lat, data.lon));
                 opt.title(data.name);
@@ -105,9 +102,9 @@ public class PhotoMap extends FragmentActivity implements OnMapReadyCallback,
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        for(int i = 0; i < permissions.length; i++) {
+        for (int i = 0; i < permissions.length; i++) {
             if (permissions[i].equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                if(grantResults[i] == PERMISSION_GRANTED) {
+                if (grantResults[i] == PERMISSION_GRANTED) {
                     postPermissions(true);
                     return;
                 }
